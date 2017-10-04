@@ -3,4 +3,5 @@ multi_thread_server
 single_thread_server
 *.zip
 *~
-\#*\#
+#*#
+.git
