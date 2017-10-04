@@ -36,7 +36,7 @@ main (int argc, char **argv) {
 
   /* less than 1024 you need to be root, >65535 isn't valid */
   if (p < 1024 || p > 65535) {
-    fprintf (stderr, "%s: %d should be in range 1024..65535\n",
+    fprintf (stderr, "%s: %d should be in range 1024..65535 to be usable\n",
 	     myname, p);
     exit (1);
   }
