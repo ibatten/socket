@@ -1,0 +1,164 @@
+This is an early draft of sample code for the networking course.  It has
+been tested, or at least run once, on MacOS (10.12.6) and on Linux (a
+reasonably up to date Raspberry Pi running Debian, the school machines,
+some servers of mine running mostly Debian) and, as if anyone born after
+1975 cares, Solaris (11.3 on x86).  It has also been compiled on both 32
+and 64 bit machines.
+
+I have fixed several bugs as I went along, helped by porting, but I
+didn't start until after lunch and it's now four-ish, so it is likely to
+contain more.  Please find them and tell me.
+
+The code contains a function which reads from a socket, displays the
+data and then echoes it back where it came from
+(service_client_socket.c), a function which acquires a socket to listen
+on (get_listen_socket.c), a function which waits for incoming
+connections on that socket and processes them either one at a time
+(service_listen_socket.c) or for multiple connections in parallel
+(service_listen_socket_multithread.c) plus some helper functions, header
+files, a main function and other odds and ends.
+
+After you have unpacked the code with unzip, it is compiled with "make"
+[1].  For the benefit of better diagnostics, it attempts to use clang if
+it appears to be available.
+
+igb@pi-one:~$ rm -rf socket
+igb@pi-one:~$ mkdir socket
+igb@pi-one:~$ cd socket
+igb@pi-one:~/socket$ unzip ../socket.zip
+Archive:  ../socket.zip
+  inflating: get_listen_socket.c     
+  inflating: main.c                  
+  inflating: make_printable_address.c  
+  inflating: service_client_socket.c  
+  inflating: service_listen_socket.c  
+  inflating: service_listen_socket_multithread.c  
+ extracting: get_listen_socket.h     
+  inflating: make_printable_address.h  
+  inflating: service_client_socket.h  
+ extracting: service_listen_socket.h  
+ extracting: service_listen_socket_multithread.h  
+  inflating: Makefile                
+  inflating: README                  
+igb@pi-one:~/socket$ make
+clang -Wall -Werror   -c -o main.o main.c
+clang -Wall -Werror   -c -o get_listen_socket.o get_listen_socket.c
+clang -Wall -Werror   -c -o service_client_socket.o service_client_socket.c
+clang -Wall -Werror   -c -o make_printable_address.o make_printable_address.c
+clang -Wall -Werror   -c -o service_listen_socket.o service_listen_socket.c
+clang -o single_thread_server -Wall -Werror main.o get_listen_socket.o service_client_socket.o make_printable_address.o service_listen_socket.o -lpthread
+clang -Wall -Werror   -c -o service_listen_socket_multithread.o service_listen_socket_multithread.c
+clang -o multi_thread_server -Wall -Werror main.o get_listen_socket.o service_client_socket.o make_printable_address.o service_listen_socket_multithread.o -lpthread 
+igb@pi-one:~/socket$ 
+
+Once compiled, it can be run either as single-threaded or multi-threaded
+server, specifying a port-number to listen on.  You can then connect to
+it using telnet or similar, and it will echo back what you type and log
+it on the window where the server is running:
+
+igb@pi-one:~/socket$ ./multi_thread_server 1234
+binding  to port 1234
+new connection from 2001:8b0:129f:a90d:3061:3936:6136:3465 port 56927
+echoed 7 bytes back to 2001:8b0:129f:a90d:3061:3936:6136:3465 port 56927, "hello.."
+connection from 2001:8b0:129f:a90d:3061:3936:6136:3465 port 56927 closed
+new connection from 2001:8b0:129f:a90d:3061:3936:6136:3465 port 56934
+echoed 7 bytes back to 2001:8b0:129f:a90d:3061:3936:6136:3465 port 56934, "hello.."
+new connection from 2001:630:1d2:3142:8:20ff:fed7:92ef port 42928
+echoed 31 bytes back to 2001:630:1d2:3142:8:20ff:fed7:92ef port 42928, "hello from mail.batten.eu.org.."
+new connection from 2a04:92c7:e:5db::965d port 56726
+echoed 21 bytes back to 2a04:92c7:e:5db::965d port 56726, "hello from offsite8.."
+connection from 2001:630:1d2:3142:8:20ff:fed7:92ef port 42928 closed
+connection from 2a04:92c7:e:5db::965d port 56726 closed
+^C
+igb@pi-one:~/socket$ 
+
+From other machines you can now connect to it, for example:
+
+igb@mail:~$ telnet pi-one 1234
+Trying 2001:8b0:129f:a90e:3141:5926:5359:1...
+Connected to pi-one.batten.eu.org.
+Escape character is '^]'.
+hello from mail.batten.eu.org
+hello from mail.batten.eu.org
+^]quit
+
+telnet> quit
+Connection to pi-one.batten.eu.org closed.
+igb@mail:~$
+
+You can also connect to it on the local machine, using either IPv4:
+
+igb@pi-one:~$ telnet 127.0.0.1 1234
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+hello
+hello
+^]quit
+
+telnet> quit
+Connection closed.
+
+or using IPv6:
+
+igb@pi-one:~$ telnet ::1 1234
+Trying ::1...
+Connected to ::1.
+Escape character is '^]'.
+hello
+hello
+^]quit
+
+telnet> quit
+Connection closed.
+igb@pi-one:~$ 
+
+and you can see the special-case way in which IPv4 addresses are
+embedded into IPv6 addresses when necessary:
+
+igb@pi-one:~/socket$ ./multi_thread_server 1234
+binding  to port 1234
+new connection from ::ffff:127.0.0.1 port 58500
+echoed 7 bytes back to ::ffff:127.0.0.1 port 58500, "hello.."
+connection from ::ffff:127.0.0.1 port 58500 closed
+new connection from ::1 port 45970
+echoed 7 bytes back to ::1 port 45970, "hello.."
+connection from ::1 port 45970 closed
+
+You might need to install telnet on your own machine:
+
+igb@offsite8:~$ telnet pi-one 1234
+-bash: telnet: command not found
+igb@offsite8:~$ sudo apt-get install telnet
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+The following NEW packages will be installed:
+  telnet
+0 upgraded, 1 newly installed, 0 to remove and 2 not upgraded.
+Need to get 65.8 kB of archives.
+After this operation, 147 kB of additional disk space will be used.
+Get:1 http://ftp.us.debian.org/debian/ wheezy/main telnet i386 0.17-36 [65.8 kB]
+Fetched 65.8 kB in 0s (155 kB/s)
+[master 4068f5b] saving uncommitted changes in /etc prior to apt run
+ Author: igb <igb@offsite8.batten.eu.org>
+ 2 files changed, 44 insertions(+), 49 deletions(-)
+Selecting previously unselected package telnet.
+(Reading database ... 28328 files and directories currently installed.)
+Unpacking telnet (from .../telnet_0.17-36_i386.deb) ...
+Processing triggers for man-db ...
+Setting up telnet (0.17-36) ...
+update-alternatives: using /usr/bin/telnet.netkit to provide /usr/bin/telnet (telnet) in auto mode
+[master 1c587e1] committing changes in /etc after apt run
+ Author: igb <igb@offsite8.batten.eu.org>
+ 2 files changed, 2 insertions(+)
+ create mode 120000 alternatives/telnet
+ create mode 120000 alternatives/telnet.1.gz
+igb@offsite8:~$ telnet pi-one 1234
+
+
+
+
+
+[1] If my some amazing chance you actually _are_ using Solaris, you need
+to use gmake, as it uses some of the GNU extensions, notably $+.
