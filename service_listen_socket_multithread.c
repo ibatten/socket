@@ -26,7 +26,8 @@ typedef struct thread_control_block {
 } thread_control_block_t;
 
 
-void *client_thread (void *data) {
+static void
+*client_thread (void *data) {
   thread_control_block_t *tcb_p = (thread_control_block_t *) data;
   char buffer [INET6_ADDRSTRLEN + 32];
   char *printable;
@@ -42,7 +43,8 @@ void *client_thread (void *data) {
   pthread_exit (0);
 }
 
-int service_listen_socket (const int s) {
+int
+service_listen_socket (const int s) {
   /* accept takes a socket in the listening state, and waits until a
      connection arrives.  It returns the new connection, and updates the
      address structure and length (if supplied) with the address of the
