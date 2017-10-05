@@ -26,8 +26,8 @@ typedef struct thread_control_block {
 } thread_control_block_t;
 
 
-static void
-*client_thread (void *data) {
+static void *
+client_thread (void *data) {
   thread_control_block_t *tcb_p = (thread_control_block_t *) data;
   char buffer [INET6_ADDRSTRLEN + 32];
   char *printable;
@@ -91,7 +91,7 @@ service_listen_socket (const int s) {
     
       if (pthread_create (&thread, 0, &client_thread, (void *) tcb_p) != 0) {
 	perror ("pthread_create");
-	goto error_exit;	/* avoid break here in of the later
+	goto error_exit;	/* avoid break here in case of the later
 				   addition of an enclosing loop */
       }
     }

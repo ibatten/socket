@@ -37,12 +37,17 @@ service_client_socket (const int s, const char *const tag) {
     }
     /* NUL-terminal the string */
     buffer[bytes] = '\0';
-    /* special case for tidy printing: if the last two characters are \r\n
-       zap them so that the newline following the quotes is the only
-       one. */
-    if (bytes >= 2 && buffer[bytes - 2] == '\r' && buffer[bytes - 1] == '\n') {
-      strcpy (buffer + bytes - 2, "..");
+    /* special case for tidy printing: if the last two characters are
+       \r\n or the last character is \n, zap them so that the newline
+       following the quotes is the only one. */
+    if (bytes >= 1 && buffer[bytes - 1] == '\n') {
+      if (bytes >= 2 && buffer[bytes - 2] == '\r') {
+	strcpy (buffer + bytes - 2, "..");
+      } else {
+	strcpy (buffer + bytes - 1, ".");
+      }
     }
+    
 #if (__SIZE_WIDTH__ == 64 || __SIZEOF_POINTER__ == 8)
     printf ("echoed %ld bytes back to %s, \"%s\"\n", bytes, tag, buffer);
 #else
@@ -55,6 +60,7 @@ service_client_socket (const int s, const char *const tag) {
     return -1;
   }
   printf ("connection from %s closed\n", tag);
+  close (s);
   return 0;
 }
 

@@ -132,6 +132,13 @@ main (int argc, char **argv) {
 
   pthread_t send_thread, receive_thread;
 
+  /* as it happens, in this particular case, you could get away with not
+     malloc-ing these.  The main thread will not exit until the other
+     threads have exited, and therefore automatic variables on this
+     thread's stack are OK for other threads to access.  But it violates
+     the principle of least surprise and looks scary, so malloc () them
+     to be sure.  */
+
   fdpair_t *send = malloc (sizeof (fdpair_t));
   fdpair_t *receive = malloc (sizeof (fdpair_t));
 

@@ -1,0 +1,8 @@
+- *.o
+- multi_thread_server
+- single_thread_server
+- client
+- *.zip
+- *~
+- #*#
+- .git
